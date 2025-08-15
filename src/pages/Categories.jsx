@@ -1,34 +1,29 @@
-import React, { useState, useEffect } from "react";
 import {
-  Layout,
-  Typography,
-  Table,
-  Button,
-  Space,
-  Tag,
-  Image,
-  Modal,
-  Input,
-  Select,
-  Form,
-  Popconfirm,
-  Upload,
-  message,
-  Tree,
-} from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
-  UploadOutlined,
+  EditOutlined,
   FolderOutlined,
-  FolderAddOutlined,
   LoadingOutlined,
-  EyeOutlined,
-  ZoomOutOutlined,
+  PlusOutlined,
+  SearchOutlined,
   ZoomInOutlined,
 } from "@ant-design/icons";
+import {
+  Button,
+  Form,
+  Image,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Tree,
+  Typography,
+  Upload,
+} from "antd";
+import { useEffect, useState } from "react";
 import apiClient from "../services/apiClient";
 
 const { Title } = Typography;
@@ -48,6 +43,7 @@ const Categories = () => {
   const [pageSize, setPageSize] = useState(10);
   const [imageUrl, setImageUrl] = useState("");
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   const [treeData, setTreeData] = useState([]);
 
@@ -55,14 +51,14 @@ const Categories = () => {
     setLoading(true);
     try {
       // Include pagination parameters in the API request
-      const response = await apiClient.get("/api/categories", {
+      const response = await apiClient.get("/api/categories/all", {
         params: {
           page: page, // Backend typically uses 0-based indexing
           size: size,
         },
       });
 
-      const data = response.data.data.categories;
+      const data = response.data.data;
       setCategories(data);
       setTotalElements(response.data.data.totalElements);
       setTotalPages(response.data.data.totalPages);
@@ -155,7 +151,10 @@ const Categories = () => {
       onSuccess(response, file);
     } catch (error) {
       console.error("Failed to upload image:", error);
-      message.error("Failed to upload image");
+      messageApi.error({
+        content: <p>Có lỗi xảy ra khi thực hiện tải lên. Vui lòng thử lại</p>,
+        duration: 3,
+      });
       onError(error);
     } finally {
       setUploadLoading(false);
@@ -206,17 +205,41 @@ const Categories = () => {
           fetchData(currentPage, pageSize);
         } catch (error) {
           console.error("Failed to save category:", error);
-          message.error(
-            `Failed to ${modalType === "add" ? "add" : "update"} category. ${
-              error.response?.data?.message || error.message
-            }`
-          );
+          if (modalType === "add") {
+            messageApi.error({
+              content: (
+                <p>
+                  Có lỗi xảy ra khi thực hiện thêm danh mục. Vui lòng thử lại sau.
+                </p>
+              ),
+              duration: 3,
+            });
+          } else if (modalType === "update") {
+            messageApi.error({
+              content: (
+                <p>
+                  Có lỗi xảy ra khi thực hiện cập nhật danh mục. Vui lòng thử
+                  lại.
+                </p>
+              ),
+              duration: 3,
+            });
+          } else {
+            messageApi.error({
+              content: <p>Có lỗi xảy ra. Vui lòng thử lại sau.</p>,
+              duration: 3,
+            });
+          }
         } finally {
           setLoading(false);
         }
       })
       .catch((info) => {
         console.log("Validate Failed:", info);
+        messageApi.error({
+          content: <p>Có lỗi xảy ra. Vui lòng thử lại sau.</p>,
+          duration: 3,
+        });
       });
   };
 
@@ -227,10 +250,10 @@ const Categories = () => {
       fetchData(currentPage, pageSize); // Refresh the categories list
     } catch (error) {
       console.error("Failed to delete category:", error);
-      message.error(
-        "Failed to delete category. " +
-          (error.response?.data?.message || error.message)
-      );
+      messageApi.error({
+        content: <p>Có lỗi xảy ra khi thực hiện xóa. Vui lòng thử lại</p>,
+        duration: 3,
+      });
     }
   };
 
@@ -298,10 +321,10 @@ const Categories = () => {
             onClick={() => showModal("edit", record)}
           />
           <Popconfirm
-            title="Are you sure you want to delete this category?"
+            title="Bạn có chắc chắn muốn xóa danh mục này không?"
             onConfirm={() => handleDelete(record.id)}
-            okText="Yes"
-            cancelText="No"
+            okText="Có"
+            cancelText="Không"
           >
             <Button danger icon={<DeleteOutlined />} size="small" />
           </Popconfirm>
@@ -318,6 +341,7 @@ const Categories = () => {
 
   return (
     <div className="p-6">
+      {contextHolder}
       <div className="flex justify-between items-center mb-6">
         <Title level={2}>Categories</Title>
         <Space>

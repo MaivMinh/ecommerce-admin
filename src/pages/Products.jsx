@@ -1,32 +1,29 @@
-import React, { useState, useEffect } from "react";
 import {
-  Layout,
-  Typography,
-  Table,
-  Button,
-  Space,
-  Tag,
-  Image,
-  Modal,
-  Input,
-  Select,
-  Form,
-  Popconfirm,
-  Upload,
-  Tabs,
-  message,
-  Row,
-  Col,
-} from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
+  EditOutlined,
   EyeOutlined,
+  PlusOutlined,
   SearchOutlined,
-  UploadOutlined,
-  PictureOutlined,
 } from "@ant-design/icons";
+import {
+  Button,
+  Col,
+  Form,
+  Image,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+  Upload,
+} from "antd";
+import { useEffect, useState } from "react";
 import apiClient from "../services/apiClient";
 
 const { Title, Text } = Typography;
@@ -51,7 +48,7 @@ const Products = () => {
   const [searchText, setSearchText] = useState("");
   const [fileList, setFileList] = useState([]);
   const [additionalImages, setAdditionalImages] = useState([]);
-  const [coverImageURL, setCoverImageURL] = useState("");
+  const [coverImageURL, setCoverImageURL] = useState(null);
   const [additionalImageURLs, setAdditionalImageURLs] = useState([]);
 
   const fetchData = async (page = currentPage, size = pageSize) => {
@@ -59,7 +56,7 @@ const Products = () => {
       setLoading(true);
       const productsResponse = await apiClient.get("/api/products", {
         params: {
-          page: page, // Convert to 0-based for backend
+          page: page,
           size: size,
         },
       });
@@ -72,7 +69,7 @@ const Products = () => {
         isBestseller: product.isBestseller,
         isFeatured: product.isFeatured,
         isNew: product.isNew,
-        cover: product.cover || "https://via.placeholder.com/150",
+        cover: product.cover,
         images: product.images || [],
         productVariants: product.productVariants || [],
       }));
@@ -121,10 +118,10 @@ const Products = () => {
         productVaraints: product.productVariants || [],
       });
 
+      console.log(product.cover);
       setFileList([
         {
           uid: "1",
-          name: "cover.png",
           status: "done",
           url: product.cover,
         },
@@ -134,7 +131,6 @@ const Products = () => {
       setAdditionalImages(
         (product.images || []).map((image, index) => ({
           uid: `additional-${index}`,
-          name: `image-${index}.png`,
           status: "done",
           url: image,
         }))
@@ -230,6 +226,7 @@ const Products = () => {
           setLoading(true);
 
           const formattedVariants = productVariants.map((variant) => ({
+            id: variant.id,
             size: variant.size,
             colorName: variant.colorName,
             colorHex: variant.colorHex,
@@ -241,7 +238,7 @@ const Products = () => {
           // Create product data with image URLs and product variants
           const productData = {
             ...values,
-            cover: coverImageURL || "", // Provide fallback empty string
+            cover: coverImageURL, // Provide fallback empty string
             images: additionalImageURLs || [], // Provide fallback empty array
             productVariants: formattedVariants,
           };
@@ -299,7 +296,7 @@ const Products = () => {
       .then((values) => {
         // Create variant with properly formatted field names
         const newVariant = {
-          id: Date.now().toString(), // Temporary ID for demo purposes
+          id: null, // Temporary ID for demo purposes
           size: values.size,
           colorName: values.colorName,
           colorHex: values.colorHex,
@@ -326,7 +323,15 @@ const Products = () => {
       title: "Image",
       dataIndex: "cover",
       key: "cover",
-      render: (cover) => <Image src={cover} width={50} height={50} />,
+      render: (cover) => (
+        <Image
+          src={cover || "https://via.placeholder.com/50x50?text=No+Image"}
+          width={50}
+          height={50}
+          fallback="https://via.placeholder.com/50x50?text=No+Image"
+          preview={false}
+        />
+      ),
     },
     {
       title: "Name",
@@ -547,9 +552,11 @@ const Products = () => {
                 <Input />
               </Form.Item>
 
-              <Form.Item name="slug" label="Slug">
-                <Input />
-              </Form.Item>
+              {modalType !== "add" && (
+                <Form.Item name="slug" label="Slug">
+                  <Input />
+                </Form.Item>
+              )}
 
               <Form.Item name="description" label="Description">
                 <Input.TextArea rows={4} />

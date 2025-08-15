@@ -6,7 +6,7 @@ const PROD_API_BASE_URL = "https://www.moviereservation.software/";
 
 /// Tạo instance tập trung.
 const apiClient = axios.create({
-  baseURL: PROD_API_BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
