@@ -26,7 +26,7 @@ import {
 import { useEffect, useState } from "react";
 import apiClient from "../services/apiClient";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
@@ -51,6 +51,12 @@ const Products = () => {
   const [coverImageURL, setCoverImageURL] = useState(null);
   const [additionalImageURLs, setAdditionalImageURLs] = useState([]);
 
+  // Helper function to validate image URLs
+  const isValidImageUrl = (url) => {
+    if (!url) return false;
+    return url.startsWith("http://") || url.startsWith("https://");
+  };
+
   const fetchData = async (page = currentPage, size = pageSize) => {
     try {
       setLoading(true);
@@ -62,9 +68,11 @@ const Products = () => {
       });
 
       const data = productsResponse.data.data;
+      console.log("API response data:", data);
 
       const formattedProducts = data.products.map((product) => ({
         ...product,
+        key: product.id, // Add key for better table performance
         categoryId: product.categoryId,
         isBestseller: product.isBestseller,
         isFeatured: product.isFeatured,
@@ -74,6 +82,7 @@ const Products = () => {
         productVariants: product.productVariants || [],
       }));
 
+      console.log("Formatted products:", formattedProducts);
       setProducts(formattedProducts);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
@@ -101,12 +110,12 @@ const Products = () => {
     setActiveTab("1");
 
     if (type === "edit" || type === "view") {
+      console.log("Showing modal for product:", product);
+
       form.setFieldsValue({
         id: product.id,
         name: product.name,
         slug: product.slug,
-        cover: product.cover,
-        images: product.images || [],
         description: product.description,
         price: product.price,
         originalPrice: product.originalPrice,
@@ -115,37 +124,55 @@ const Products = () => {
         isNew: product.isNew,
         isBestseller: product.isBestseller,
         categoryId: product.categoryId,
-        productVaraints: product.productVariants || [],
       });
 
-      console.log(product.cover);
-      setFileList([
-        {
-          uid: "1",
-          status: "done",
-          url: product.cover,
-        },
-      ]);
+      // Format cover image for upload component
+      if (isValidImageUrl(product.cover)) {
+        console.log("Setting cover image:", product.cover);
+        setFileList([
+          {
+            uid: "-1",
+            name: "cover-image.avif",
+            status: "done",
+            url: product.cover,
+          },
+        ]);
+        setCoverImageURL(product.cover);
+      } else {
+        setFileList([]);
+        setCoverImageURL("");
+      }
 
-      // Format additional images properly
-      setAdditionalImages(
-        (product.images || []).map((image, index) => ({
+      // Format additional images for upload component
+      if (product.images && product.images.length > 0) {
+        console.log("Setting additional images:", product.images);
+        const formattedImages = product.images.map((image, index) => ({
           uid: `additional-${index}`,
+          name: `image-${index}.avif`,
           status: "done",
           url: image,
-        }))
-      );
+        }));
+        setAdditionalImages(formattedImages);
+        setAdditionalImageURLs(product.images);
+      } else {
+        setAdditionalImages([]);
+        setAdditionalImageURLs([]);
+      }
 
-      setCoverImageURL(product.cover);
-      setAdditionalImageURLs(product.images || []);
-      setProductVariants(product.productVariants || []);
+      // Set product variants
+      if (product.productVariants && product.productVariants.length > 0) {
+        setProductVariants(product.productVariants);
+      } else {
+        setProductVariants([]);
+      }
     } else {
+      // Reset form for "add" mode
       form.resetFields();
       setFileList([]);
       setAdditionalImages([]);
       setProductVariants([]);
-      setCoverImageURL(""); // Explicitly reset
-      setAdditionalImageURLs([]); // Explicitly reset
+      setCoverImageURL("");
+      setAdditionalImageURLs([]);
     }
   };
 
@@ -174,6 +201,7 @@ const Products = () => {
       );
 
       const imageUrl = response.data.data.url;
+      console.log("Cover image uploaded successfully:", imageUrl);
       setCoverImageURL(imageUrl);
       onSuccess(response, file);
     } catch (error) {
@@ -198,6 +226,7 @@ const Products = () => {
       );
 
       const imageUrl = response.data.data.url;
+      console.log("Additional image uploaded successfully:", imageUrl);
       setAdditionalImageURLs((prev) => [...prev, imageUrl]);
       onSuccess(response, file);
     } catch (error) {
@@ -215,6 +244,12 @@ const Products = () => {
       newUrls.splice(index, 1);
       setAdditionalImageURLs(newUrls);
     }
+    return true;
+  };
+
+  // Handler for removing cover image
+  const handleRemoveCoverImage = () => {
+    setCoverImageURL("");
     return true;
   };
 
@@ -238,25 +273,22 @@ const Products = () => {
           // Create product data with image URLs and product variants
           const productData = {
             ...values,
-            cover: coverImageURL, // Provide fallback empty string
+            cover: coverImageURL || "", // Provide fallback empty string
             images: additionalImageURLs || [], // Provide fallback empty array
             productVariants: formattedVariants,
           };
 
+          console.log("Submitting product data:", productData);
+
           // Send the data to your API
           if (modalType === "add") {
-            await apiClient.post("/api/products", productData, {
-              headers: { "Content-Type": "application/json" },
-            });
+            await apiClient.post("/api/products", productData);
+            message.success("Product added successfully!");
           } else if (modalType === "edit") {
-            await apiClient.put(`/api/products`, productData, {
-              headers: { "Content-Type": "application/json" },
-            });
+            await apiClient.put(`/api/products`, productData);
+            message.success("Product updated successfully!");
           }
 
-          message.success(
-            `Product ${modalType === "add" ? "added" : "updated"} successfully!`
-          );
           setVisible(false);
           // Refresh the products list
           fetchData();
@@ -274,20 +306,19 @@ const Products = () => {
   };
 
   const handleDelete = async (id) => {
-    // Delete logic would go here
     try {
-      const response = await apiClient.delete(`/api/products/${id}`);
+      await apiClient.delete(`/api/products/${id}`);
+      message.success("Product deleted successfully!");
       fetchData();
     } catch (error) {
       console.error("Error deleting product:", error);
       message.error("Failed to delete product");
-      return;
     }
   };
 
   const handleSearch = (value) => {
     setSearchText(value);
-    // In a real app, you'd filter products based on search or make an API call
+    // You could implement actual search here if needed
   };
 
   const handleAddVariant = () => {
@@ -296,13 +327,13 @@ const Products = () => {
       .then((values) => {
         // Create variant with properly formatted field names
         const newVariant = {
-          id: null, // Temporary ID for demo purposes
+          id: null, // Will be assigned by backend
           size: values.size,
           colorName: values.colorName,
           colorHex: values.colorHex,
-          price: values.price,
-          originalPrice: values.originalPrice,
-          quantity: values.quantity,
+          price: parseFloat(values.price),
+          originalPrice: parseFloat(values.originalPrice || 0),
+          quantity: parseInt(values.quantity),
         };
         setProductVariants([...productVariants, newVariant]);
         variantForm.resetFields();
@@ -323,15 +354,26 @@ const Products = () => {
       title: "Image",
       dataIndex: "cover",
       key: "cover",
-      render: (cover) => (
-        <Image
-          src={cover || "https://via.placeholder.com/50x50?text=No+Image"}
-          width={50}
-          height={50}
-          fallback="https://via.placeholder.com/50x50?text=No+Image"
-          preview={false}
-        />
-      ),
+      render: (cover, record) => {
+        console.log(`Rendering image for ${record.name}, URL: ${cover}`);
+        return (
+          <Image
+            src={
+              isValidImageUrl(cover)
+                ? cover
+                : "https://via.placeholder.com/50x50?text=No+Image"
+            }
+            width={50}
+            height={50}
+            alt={record.name}
+            fallback="https://via.placeholder.com/50x50?text=Error"
+            preview={false}
+            onError={(e) => {
+              console.error("Image failed to load:", cover);
+            }}
+          />
+        );
+      },
     },
     {
       title: "Name",
@@ -346,7 +388,7 @@ const Products = () => {
       title: "Price",
       dataIndex: "price",
       key: "price",
-      render: (text) => `${text} VND`,
+      render: (text) => `${text.toLocaleString()} VND`,
       sorter: (a, b) => a.price - b.price,
     },
     {
@@ -440,7 +482,7 @@ const Products = () => {
       title: "Price",
       dataIndex: "price",
       key: "price",
-      render: (text) => `$${text}`,
+      render: (text) => `${text.toLocaleString()} VND`,
     },
     {
       title: "Quantity",
@@ -516,7 +558,7 @@ const Products = () => {
             ? "Edit Product"
             : "View Product"
         }
-        visible={visible}
+        open={visible}
         onCancel={handleCancel}
         footer={
           modalType === "view"
@@ -529,7 +571,12 @@ const Products = () => {
                 <Button key="back" onClick={handleCancel}>
                   Cancel
                 </Button>,
-                <Button key="submit" type="primary" onClick={handleOk}>
+                <Button
+                  key="submit"
+                  type="primary"
+                  onClick={handleOk}
+                  loading={loading}
+                >
                   {modalType === "add" ? "Create" : "Update"}
                 </Button>,
               ]
@@ -645,48 +692,148 @@ const Products = () => {
           </TabPane>
 
           <TabPane tab="Images" key="2">
+            {/* Cover Image Section */}
             <div className="mb-8">
               <Title level={5}>Cover Image</Title>
-              <Upload
-                listType="picture-card"
-                fileList={fileList}
-                onChange={({ fileList }) => setFileList(fileList)}
-                customRequest={customUploadCover}
-                maxCount={1}
-                disabled={modalType === "view" || loading}
-                onRemove={() => {
-                  setCoverImageURL("");
-                  return true;
-                }}
-              >
-                {fileList.length < 1 && (
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>Upload</div>
+              <div className="mb-4 flex flex-col items-start justify-start gap-y-0">
+                {coverImageURL ? (
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "inline-block",
+                    }}
+                  >
+                    <Image
+                      src={coverImageURL}
+                      alt="Product cover"
+                      style={{ maxWidth: "100%", maxHeight: 200 }}
+                      fallback="https://via.placeholder.com/200x200?text=No+Image"
+                    />
+                    {modalType !== "view" && (
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        style={{ position: "absolute", top: 0, right: 0 }}
+                        onClick={handleRemoveCoverImage}
+                        disabled={loading}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      color: "#999",
+                      textAlign: "center",
+                      padding: "20px",
+                      border: "1px dashed #d9d9d9",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    No cover image
                   </div>
                 )}
-              </Upload>
+
+                {modalType !== "view" && (
+                  <Upload
+                    customRequest={customUploadCover}
+                    showUploadList={false}
+                    disabled={loading}
+                    accept="image/*"
+                  >
+                    <Button
+                      icon={<PlusOutlined />}
+                      style={{ marginTop: 8 }}
+                      disabled={loading}
+                    >
+                      {coverImageURL
+                        ? "Change Cover Image"
+                        : "Upload Cover Image"}
+                    </Button>
+                  </Upload>
+                )}
+              </div>
             </div>
 
+            {/* Additional Images Section */}
             <div>
               <Title level={5}>Additional Images (Up to 4)</Title>
-              <Upload
-                listType="picture-card"
-                fileList={additionalImages}
-                onChange={({ fileList }) => setAdditionalImages(fileList)}
-                customRequest={customUploadAdditional}
-                maxCount={4}
-                multiple
-                disabled={modalType === "view"}
-                onRemove={handleRemoveAdditionalImage}
-              >
-                {additionalImages.length < 4 && (
-                  <div>
-                    <PlusOutlined />
-                    <div style={{ marginTop: 8 }}>Upload</div>
-                  </div>
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  {additionalImageURLs.length > 0 ? (
+                    additionalImageURLs.map((image, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          position: "relative",
+                          display: "inline-block",
+                        }}
+                      >
+                        <Image
+                          src={image}
+                          alt={`Product image ${index + 1}`}
+                          style={{
+                            width: 120,
+                            height: 120,
+                            objectFit: "cover",
+                          }}
+                          fallback="https://via.placeholder.com/120x120?text=Error"
+                        />
+                        {modalType !== "view" && (
+                          <Button
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            style={{ position: "absolute", top: 0, right: 0 }}
+                            onClick={() => {
+                              const newUrls = [...additionalImageURLs];
+                              newUrls.splice(index, 1);
+                              setAdditionalImageURLs(newUrls);
+                              setAdditionalImages((prev) => {
+                                const newImages = [...prev];
+                                newImages.splice(index, 1);
+                                return newImages;
+                              });
+                            }}
+                            disabled={loading}
+                          />
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        color: "#999",
+                        textAlign: "center",
+                        width: "100%",
+                        padding: "20px",
+                        border: "1px dashed #d9d9d9",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      No additional images
+                    </div>
+                  )}
+                </div>
+
+                {modalType !== "view" && additionalImageURLs.length < 4 && (
+                  <Upload
+                    customRequest={customUploadAdditional}
+                    showUploadList={false}
+                    disabled={loading}
+                    accept="image/*"
+                  >
+                    <Button icon={<PlusOutlined />} disabled={loading}>
+                      Add Image
+                    </Button>
+                  </Upload>
                 )}
-              </Upload>
+              </div>
             </div>
           </TabPane>
 
@@ -696,9 +843,10 @@ const Products = () => {
               <Table
                 columns={variantColumns}
                 dataSource={productVariants}
-                rowKey="id"
+                rowKey={(record) => record.id || Math.random().toString()}
                 pagination={false}
                 size="small"
+                locale={{ emptyText: "No variants for this product" }}
               />
             </div>
 
@@ -711,7 +859,9 @@ const Products = () => {
                       <Form.Item
                         name="size"
                         label="Size"
-                        rules={[{ required: true }]}
+                        rules={[
+                          { required: true, message: "Please select size" },
+                        ]}
                       >
                         <Select placeholder="Select size">
                           <Option value="S">S</Option>
@@ -726,7 +876,12 @@ const Products = () => {
                       <Form.Item
                         name="colorName"
                         label="Color Name"
-                        rules={[{ required: true }]}
+                        rules={[
+                          {
+                            required: true,
+                            message: "Please enter color name",
+                          },
+                        ]}
                       >
                         <Input />
                       </Form.Item>
@@ -735,7 +890,9 @@ const Products = () => {
                       <Form.Item
                         name="colorHex"
                         label="Color Hex"
-                        rules={[{ required: true }]}
+                        rules={[
+                          { required: true, message: "Please select color" },
+                        ]}
                       >
                         <Input type="color" />
                       </Form.Item>
@@ -747,7 +904,9 @@ const Products = () => {
                       <Form.Item
                         name="price"
                         label="Price"
-                        rules={[{ required: true }]}
+                        rules={[
+                          { required: true, message: "Please enter price" },
+                        ]}
                       >
                         <Input type="number" suffix=" VND" />
                       </Form.Item>
@@ -761,14 +920,20 @@ const Products = () => {
                       <Form.Item
                         name="quantity"
                         label="Quantity"
-                        rules={[{ required: true }]}
+                        rules={[
+                          { required: true, message: "Please enter quantity" },
+                        ]}
                       >
                         <Input type="number" />
                       </Form.Item>
                     </Col>
                   </Row>
 
-                  <Button type="primary" onClick={handleAddVariant}>
+                  <Button
+                    type="primary"
+                    onClick={handleAddVariant}
+                    disabled={loading}
+                  >
                     Add Variant
                   </Button>
                 </Form>

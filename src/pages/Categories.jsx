@@ -53,7 +53,7 @@ const Categories = () => {
       // Include pagination parameters in the API request
       const response = await apiClient.get("/api/categories/all", {
         params: {
-          page: page, // Backend typically uses 0-based indexing
+          page: page,
           size: size,
         },
       });
@@ -209,7 +209,8 @@ const Categories = () => {
             messageApi.error({
               content: (
                 <p>
-                  Có lỗi xảy ra khi thực hiện thêm danh mục. Vui lòng thử lại sau.
+                  Có lỗi xảy ra khi thực hiện thêm danh mục. Vui lòng thử lại
+                  sau.
                 </p>
               ),
               duration: 3,
@@ -463,13 +464,15 @@ const Categories = () => {
             </Upload>
           </Form.Item>
 
-          <Form.Item
-            name="slug"
-            label="Slug"
-            rules={[{ required: false, message: "Please enter a slug" }]}
-          >
-            <Input />
-          </Form.Item>
+          {modalType !== "add" && (
+            <Form.Item
+              name="slug"
+              label="Slug"
+              rules={[{ required: false, message: "Please enter a slug" }]}
+            >
+              <Input />
+            </Form.Item>
+          )}
 
           <Form.Item name="description" label="Description">
             <Input.TextArea rows={4} />

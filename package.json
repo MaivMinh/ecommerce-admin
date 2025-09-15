@@ -10,12 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-keycloak/web": "^3.4.0",
     "@tailwindcss/vite": "^4.1.8",
     "antd": "^5.25.4",
     "axios": "^1.9.0",
     "framer-motion": "^12.16.0",
     "jwt-decode": "^4.0.0",
+    "keycloak-js": "^26.2.0",
     "moment": "^2.30.1",
+    "oidc-client": "^1.11.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",

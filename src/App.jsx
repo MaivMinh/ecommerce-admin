@@ -15,100 +15,103 @@ import PublicRoute from "./components/PublicRoute";
 import Orders from "./pages/Orders";
 import Promotions from "./pages/Promotions";
 import PaymentMethods from "./pages/PaymentMethods";
+import { KeycloakProvider } from "./components/KeycloakProvider";
 
 function App() {
   return (
-    <AuthContextProvider>
-      <Router>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          {/* MainLayout with nested routes */}
-          <Route path="/" element={<MainLayout />}>
+    <KeycloakProvider>
+      <AuthContextProvider>
+        <Router>
+          <Routes>
             <Route
-              index
+              path="/login"
               element={
-                <PrivateRoute>
-                  <Home />
-                </PrivateRoute>
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
               }
             />
-            <Route
-              path="home"
-              element={
-                <PrivateRoute>
-                  <Home />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="products"
-              element={
-                <PrivateRoute>
-                  <Products />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="categories"
-              element={
-                <PrivateRoute>
-                  <Categories />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="users"
-              element={
-                <PrivateRoute>
-                  <Users />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="accounts"
-              element={
-                <PrivateRoute>
-                  <Accounts />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="orders"
-              element={
-                <PrivateRoute>
-                  <Orders />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="promotions"
-              element={
-                <PrivateRoute>
-                  <Promotions />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="payment-methods"
-              element={
-                <PrivateRoute>
-                  <PaymentMethods />
-                </PrivateRoute>
-              }
-            />
-          </Route>
+            {/* MainLayout with nested routes */}
+            <Route path="/" element={<MainLayout />}>
+              <Route
+                index
+                element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="home"
+                element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="products"
+                element={
+                  <PrivateRoute>
+                    <Products />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="categories"
+                element={
+                  <PrivateRoute>
+                    <Categories />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="users"
+                element={
+                  <PrivateRoute>
+                    <Users />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="accounts"
+                element={
+                  <PrivateRoute>
+                    <Accounts />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="orders"
+                element={
+                  <PrivateRoute>
+                    <Orders />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="promotions"
+                element={
+                  <PrivateRoute>
+                    <Promotions />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="payment-methods"
+                element={
+                  <PrivateRoute>
+                    <PaymentMethods />
+                  </PrivateRoute>
+                }
+              />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </AuthContextProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </AuthContextProvider>
+    </KeycloakProvider>
   );
 }
 

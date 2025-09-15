@@ -1,35 +1,33 @@
-import React, { useState, useEffect } from "react";
 import {
-  Layout,
-  Typography,
-  Table,
-  Button,
-  Space,
-  Tag,
-  Modal,
-  Input,
-  Select,
-  Form,
-  Popconfirm,
-  DatePicker,
-  message,
-  InputNumber,
-  Badge,
-  Tabs,
-  Statistic,
-  Card,
-} from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  SearchOutlined,
-  PercentageOutlined,
-  DollarOutlined,
   CarOutlined,
+  DeleteOutlined,
+  DollarOutlined,
+  EditOutlined,
+  PercentageOutlined,
+  PlusOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
-import apiClient from "../services/apiClient";
+import {
+  Button,
+  Card,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  message,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tabs,
+  Tag,
+  Typography
+} from "antd";
 import moment from "moment";
+import { useEffect, useState, useCallback, useRef } from "react";
+import apiClient from "../services/apiClient";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -42,7 +40,7 @@ const Promotions = () => {
   const [loading, setLoading] = useState(false);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
   // State for modal and form
@@ -55,30 +53,37 @@ const Promotions = () => {
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState(null);
 
-  // Fetch promotions data
+  // Ref for debounce timer
+  const debounceTimer = useRef(null);
+
+  // Fetch promotions data with search
   const fetchPromotions = async (
     page = currentPage,
     size = pageSize,
-    status = filterStatus,
-    search = searchText
+    code = searchText,
+    status = filterStatus
   ) => {
     try {
       setLoading(true);
-      const response = await apiClient.get("/api/promotions", {
-        params: {
-          page: page,
-          size,
-          status: status !== undefined ? status : "",
-          search: search !== undefined ? search : "",
-        },
-      });
+      
+      // Prepare search payload
+      const searchPayload = {
+        page: page,
+        size: size,
+        code: code || "", // Send empty string if no search text
+        status: status || "" // Send empty string if no status filter
+      };
+
+      console.log("Search payload:", searchPayload);
+
+      const response = await apiClient.post("/api/promotions/search", searchPayload);
 
       const data = response.data.data;
-      setPromotions(data.promotions); // Get the promotions array
+      setPromotions(data.promotions);
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
-      setCurrentPage(page);
-      setPageSize(size);
+      setCurrentPage(data.page);
+      setPageSize(data.size);
     } catch (error) {
       console.error("Error fetching promotions:", error);
       message.error("Failed to load promotions");
@@ -87,8 +92,30 @@ const Promotions = () => {
     }
   };
 
+  // Debounced fetch function
+  const debouncedFetchPromotions = useCallback((page, size, code, status) => {
+    // Clear existing timer
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    // Set new timer
+    debounceTimer.current = setTimeout(() => {
+      fetchPromotions(page, size, code, status);
+    }, 500); // 500ms delay
+  }, []);
+
+  // Cleanup timer on unmount
   useEffect(() => {
-    fetchPromotions(currentPage, pageSize, filterStatus);
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchPromotions(currentPage, pageSize, searchText, filterStatus);
   }, []);
 
   // Modal handlers
@@ -116,6 +143,8 @@ const Promotions = () => {
     form
       .validateFields()
       .then(async (values) => {
+        console.log(values);
+        
         try {
           setLoading(true);
 
@@ -125,7 +154,8 @@ const Promotions = () => {
           // Prepare promotion data
           const promotionData = {
             ...values,
-            code: values.code.toUpperCase(), // Ensure code is uppercase
+            usageCount: 0,
+            code: values.code.toUpperCase(),
             startDate: startDate.format(),
             endDate: endDate.format(),
           };
@@ -142,7 +172,7 @@ const Promotions = () => {
           }
 
           setVisible(false);
-          fetchPromotions(currentPage, pageSize, filterStatus);
+          fetchPromotions(currentPage, pageSize, searchText, filterStatus);
         } catch (error) {
           console.error("Error saving promotion:", error);
           message.error("Failed to save promotion");
@@ -160,28 +190,51 @@ const Promotions = () => {
     try {
       await apiClient.delete(`/api/promotions/${id}`);
       message.success("Promotion deleted successfully");
-      fetchPromotions(currentPage, pageSize, filterStatus, searchText);
+      fetchPromotions(currentPage, pageSize, searchText, filterStatus);
     } catch (error) {
       console.error("Error deleting promotion:", error);
       message.error("Failed to delete promotion");
     }
   };
 
-  // Search handler
+  // Search handler with debounce - triggers API call after delay
   const handleSearch = (value) => {
-    setSearchText(value || ""); // Ensure empty string when cleared
-    fetchPromotions(1, pageSize, filterStatus, value || "");
+    const newSearchText = value || "";
+    setSearchText(newSearchText);
+    setCurrentPage(0); // Reset to first page when searching
+    
+    // Use debounced function for search to avoid overloading backend
+    debouncedFetchPromotions(0, pageSize, newSearchText, filterStatus);
   };
 
-  // Status filter handler
+  // Status filter handler - triggers API call immediately (no debounce needed for dropdown)
   const handleStatusFilter = (value) => {
-    setFilterStatus(value);
-    fetchPromotions(1, pageSize, value === undefined ? "" : value, searchText);
+    const newStatus = value === undefined ? null : value;
+    setFilterStatus(newStatus);
+    setCurrentPage(0); // Reset to first page when filtering
+    
+    // Cancel any pending search requests
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    // Immediately fetch with new status filter
+    fetchPromotions(0, pageSize, searchText, newStatus);
   };
 
-  // Pagination handler
-  const handlePaginationChange = (page, pageSize) => {
-    fetchPromotions(page, pageSize);
+  // Pagination handler - triggers API call immediately
+  const handlePaginationChange = (page, size) => {
+    const newPage = page - 1; // Convert to 0-based indexing for API
+    setCurrentPage(newPage);
+    setPageSize(size);
+    
+    // Cancel any pending search requests
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    
+    // Immediately fetch with new pagination
+    fetchPromotions(newPage, size, searchText, filterStatus);
   };
 
   // Generate discount type icon
@@ -225,7 +278,7 @@ const Promotions = () => {
         if (record.type === "percentage") {
           return `${value}%`;
         } else if (record.type === "fixed" || record.type === "shipping") {
-          return `${value} VND`;
+          return `${value.toLocaleString()} VND`;
         }
         return value;
       },
@@ -234,7 +287,7 @@ const Promotions = () => {
       title: "Min Order",
       dataIndex: "minOrderValue",
       key: "minOrderValue",
-      render: (value) => `${value} VND`,
+      render: (value) => `${value.toLocaleString()} VND`,
     },
     {
       title: "Validity",
@@ -314,12 +367,22 @@ const Promotions = () => {
         <Title level={2}>Promotions</Title>
         <Space>
           <Input
-            placeholder="Search promotions"
+            placeholder="Search by promotion code"
             prefix={<SearchOutlined />}
             onChange={(e) => handleSearch(e.target.value)}
             style={{ width: 250 }}
             allowClear
-            onPressEnter={(e) => handleSearch(e.target.value)}
+            onPressEnter={(e) => {
+              // Cancel debounce and search immediately on Enter
+              if (debounceTimer.current) {
+                clearTimeout(debounceTimer.current);
+              }
+              const newSearchText = e.target.value || "";
+              setSearchText(newSearchText);
+              setCurrentPage(0);
+              fetchPromotions(0, pageSize, newSearchText, filterStatus);
+            }}
+            value={searchText}
           />
 
           <Select
@@ -332,6 +395,7 @@ const Promotions = () => {
             <Option value="active">Active</Option>
             <Option value="inactive">Inactive</Option>
           </Select>
+          
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -396,7 +460,7 @@ const Promotions = () => {
         rowKey="id"
         loading={loading}
         pagination={{
-          current: currentPage,
+          current: currentPage + 1, // Convert back to 1-based indexing for UI
           pageSize,
           total: totalElements,
           showSizeChanger: true,
@@ -404,12 +468,13 @@ const Promotions = () => {
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} items`,
           onChange: handlePaginationChange,
+          onShowSizeChange: handlePaginationChange,
         }}
       />
 
       <Modal
         title={modalType === "add" ? "Add New Promotion" : "Edit Promotion"}
-        visible={visible}
+        open={visible}
         onCancel={handleCancel}
         footer={[
           <Button key="back" onClick={handleCancel}>
@@ -435,7 +500,7 @@ const Promotions = () => {
             name="code"
             label="Promotion Code"
             rules={[
-              { required: true, message: "Please enter pr omotion code" },
+              { required: true, message: "Please enter promotion code" },
             ]}
           >
             <Input

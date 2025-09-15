@@ -12,17 +12,20 @@ import {
   OrderedListOutlined,
   GiftOutlined,
   BankOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import logo from "../assets/images/logo.png"; // Adjust the path as necessary
+import { KeycloakContext } from "./KeycloakProvider";
+import { keycloak, logout } from "../services/keycloak";
 
 const { Header, Sider, Content } = Layout;
 
 const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { auth, logout } = useContext(AuthContext);
+  const {authenticated, loading} = useContext(KeycloakContext);
   const navigate = useNavigate();
 
   const getSelectedKey = () => {
@@ -43,11 +46,8 @@ const MainLayout = () => {
   };
 
   const handleLogout = () => {
-    if (auth && auth.isAuthenticated) {
+    if (keycloak && keycloak.authenticated) {
       logout();
-      navigate("/login", {
-        replace: true,
-      });
     }
   };
 
@@ -106,7 +106,7 @@ const MainLayout = () => {
                 key: "7",
                 icon: <UserOutlined />,
                 label: <Link to="/users">Users</Link>,
-              },
+              }
             ]}
           />
         </Sider>
@@ -119,7 +119,7 @@ const MainLayout = () => {
               className="w-16 h-16"
             />
             <div className="px-4 flex gap-4">
-              {auth && auth.isAuthenticated && (
+              {keycloak && keycloak.authenticated && (
                 <Button
                   color="orange"
                   variant="solid"
