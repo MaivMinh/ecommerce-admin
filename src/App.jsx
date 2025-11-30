@@ -16,6 +16,9 @@ import Orders from "./pages/Orders";
 import Promotions from "./pages/Promotions";
 import PaymentMethods from "./pages/PaymentMethods";
 import { KeycloakProvider } from "./components/KeycloakProvider";
+import NotifyConfig from "./pages/NotifyConfig";
+import Campaigns from "./pages/Campaigns";
+import QuestionCollections from "./pages/QuestionCollections";
 
 function App() {
   return (
@@ -102,6 +105,30 @@ function App() {
                 element={
                   <PrivateRoute>
                     <PaymentMethods />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="notify-config"
+                element={
+                  <PrivateRoute>
+                    <NotifyConfig />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="campaigns"
+                element={
+                  <PrivateRoute>
+                    <Campaigns />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="question-collections"
+                element={
+                  <PrivateRoute>
+                    <QuestionCollections />
                   </PrivateRoute>
                 }
               />

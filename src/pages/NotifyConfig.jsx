@@ -38,8 +38,8 @@ import {
   MessageOutlined,
   CodeOutlined,
 } from "@ant-design/icons";
+import apiClient from "../services/apiClient";
 import dayjs from "dayjs";
-import apiClient from "../services/apiClient.js";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -75,13 +75,13 @@ const NotifyConfig = () => {
     setLoading(true);
     try {
       const params = {
-        page: page - 1,
+        page: page,
         size: size,
       };
       if (activeFilter !== null) {
         params.isActive = activeFilter;
       }
-      const response = await apiClient.get("/api/v1/templates", { params });
+      const response = await apiClient.post("/api/templates/search", params);
       const data = response.data.data;
       setTemplates(data.content || []);
       setTotalElements(data.totalElements || 0);
@@ -99,7 +99,7 @@ const NotifyConfig = () => {
   const fetchSendLogs = async (filters = {}) => {
     setLoading(true);
     try {
-      const response = await apiClient.get("/api/v1/sends", {
+      const response = await apiClient.get("/api/send-logs", {
         params: filters,
       });
       const data = response.data.data;
@@ -127,14 +127,15 @@ const NotifyConfig = () => {
     try {
       const payload = {
         ...values,
-        defaultParams: values.defaultParams
-          ? JSON.parse(values.defaultParams)
+        params: values.params
+          ? JSON.parse(values.params)
           : null,
+        id: editingTemplate ? editingTemplate.id : null,
       };
 
       if (editingTemplate) {
         await apiClient.put(
-          `/api/v1/templates/${editingTemplate.templateCode}`,
+          `/api/templates`,
           payload
         );
         notification.success({
@@ -142,7 +143,7 @@ const NotifyConfig = () => {
           description: "Cập nhật template thành công",
         });
       } else {
-        await apiClient.post("/api/v1/templates", payload);
+        await apiClient.post("/api/templates", payload);
         notification.success({
           message: "Thành công",
           description: "Tạo template thành công",
@@ -163,9 +164,9 @@ const NotifyConfig = () => {
   };
 
   // Handle delete template
-  const handleDelete = async (templateCode) => {
+  const handleDelete = async (templateId) => {
     try {
-      await apiClient.delete(`/api/v1/templates/${templateCode}`);
+      await apiClient.delete(`/api/templates/${templateId}`);
       notification.success({
         message: "Thành công",
         description: "Xóa template thành công",
@@ -185,7 +186,7 @@ const NotifyConfig = () => {
     try {
       const params = previewForm.getFieldsValue();
       const response = await apiClient.post(
-        `/api/v1/templates/${templateCode}/render-preview`,
+        `/api/templates/${templateCode}/render-preview`,
         params.params ? JSON.parse(params.params) : {}
       );
       setPreviewContent(response.data.data);
@@ -285,20 +286,14 @@ const NotifyConfig = () => {
     },
     {
       title: "Tiêu đề",
-      dataIndex: "titleTemplate",
-      key: "titleTemplate",
+      dataIndex: "title",
+      key: "title",
       ellipsis: true,
       render: (text) => (
         <Tooltip title={text}>
           <Text ellipsis>{text}</Text>
         </Tooltip>
       ),
-    },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-      ellipsis: true,
     },
     {
       title: "Trạng thái",
@@ -341,7 +336,7 @@ const NotifyConfig = () => {
           </Tooltip>
           <Popconfirm
             title="Bạn có chắc muốn xóa template này?"
-            onConfirm={() => handleDelete(record.templateCode)}
+            onConfirm={() => handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
           >
@@ -423,7 +418,7 @@ const NotifyConfig = () => {
           <Tabs activeKey={activeTab} onChange={setActiveTab}>
             <TabPane
               tab={
-                <span>
+                <span className="flex flex-row gap-x-1">
                   <CodeOutlined />
                   Templates
                 </span>
@@ -477,7 +472,7 @@ const NotifyConfig = () => {
 
             <TabPane
               tab={
-                <span>
+                <span className="flex flex-row gap-x-1">
                   <HistoryOutlined />
                   Lịch sử gửi
                 </span>
@@ -591,7 +586,7 @@ const NotifyConfig = () => {
             </Row>
 
             <Form.Item
-              name="titleTemplate"
+              name="title"
               label="Template tiêu đề (FreeMarker)"
               rules={[
                 { required: true, message: "Vui lòng nhập template tiêu đề" },
@@ -601,7 +596,7 @@ const NotifyConfig = () => {
             </Form.Item>
 
             <Form.Item
-              name="contentTemplate"
+              name="content"
               label="Template nội dung (FreeMarker/HTML)"
               rules={[
                 { required: true, message: "Vui lòng nhập template nội dung" },
@@ -614,18 +609,14 @@ const NotifyConfig = () => {
             </Form.Item>
 
             <Form.Item
-              name="defaultParams"
-              label="Default Parameters (JSON)"
+              name="params"
+              label="Parameters (JSON)"
               help="Ví dụ: {&quot;customerName&quot;: &quot;Guest&quot;, &quot;orderId&quot;: &quot;N/A&quot;}"
             >
               <TextArea
                 rows={4}
                 placeholder='{"customerName": "Guest", "orderId": "N/A"}'
               />
-            </Form.Item>
-
-            <Form.Item name="description" label="Mô tả">
-              <TextArea rows={2} placeholder="Mô tả template..." />
             </Form.Item>
 
             <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">

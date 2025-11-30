@@ -1,23 +1,21 @@
-import React, { useContext, useState } from "react";
-import { Layout, Menu, Button } from "antd";
 import {
+  BankOutlined,
+  CrownOutlined,
   DashboardOutlined,
+  GiftOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  NotificationOutlined,
+  OrderedListOutlined,
+  QuestionCircleOutlined,
   ShoppingOutlined,
   TagsOutlined,
-  UserOutlined,
-  TeamOutlined,
-  SettingOutlined,
-  MenuUnfoldOutlined,
-  MenuFoldOutlined,
-  OrderedListOutlined,
-  GiftOutlined,
-  BankOutlined,
-  LogoutOutlined,
+  UserOutlined
 } from "@ant-design/icons";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AuthContext } from "../context/AuthContext";
+import { Button, Layout, Menu } from "antd";
+import { useState } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../assets/images/logo.png"; // Adjust the path as necessary
-import { KeycloakContext } from "./KeycloakProvider";
 import { keycloak, logout } from "../services/keycloak";
 
 const { Header, Sider, Content } = Layout;
@@ -25,8 +23,6 @@ const { Header, Sider, Content } = Layout;
 const MainLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const {authenticated, loading} = useContext(KeycloakContext);
-  const navigate = useNavigate();
 
   const getSelectedKey = () => {
     const path = location.pathname;
@@ -37,7 +33,9 @@ const MainLayout = () => {
     if (path.includes("/promotions")) return "5";
     if (path.includes("/payment-methods")) return "6";
     if (path.includes("/users")) return "7";
-    if (path.includes("/accounts")) return "8";
+    if (path.includes("/notify-config")) return "8";
+    if (path.includes("/campaigns")) return "9";
+    if (path.includes("/question-collections")) return "10";
     return "1";
   };
 
@@ -80,32 +78,47 @@ const MainLayout = () => {
               {
                 key: "2",
                 icon: <ShoppingOutlined />,
-                label: <Link to="/products">Products</Link>,
+                label: <Link to="/products">Sản phẩm</Link>,
               },
               {
                 key: "3",
                 icon: <TagsOutlined />,
-                label: <Link to="/categories">Categories</Link>,
+                label: <Link to="/categories">Danh mục</Link>,
               },
               {
                 key: "4",
                 icon: <OrderedListOutlined />,
-                label: <Link to="/orders">Orders</Link>,
+                label: <Link to="/orders">Đơn hàng</Link>,
               },
               {
                 key: "5",
                 icon: <GiftOutlined />,
-                label: <Link to="/promotions">Promotions</Link>,
+                label: <Link to="/promotions">Khuyến mãi</Link>,
               },
               {
                 key: "6",
                 icon: <BankOutlined />,
-                label: <Link to="/payment-methods">Payment methods</Link>,
+                label: <Link to="/payment-methods">Phương thức thanh toán</Link>,
               },
               {
                 key: "7",
                 icon: <UserOutlined />,
-                label: <Link to="/users">Users</Link>,
+                label: <Link to="/users">Người dùng</Link>,
+              },
+              {
+                key: "9",
+                icon: <CrownOutlined />,
+                label: <Link to="/campaigns">Chiến dịch quảng cáo</Link>,
+              },
+              {
+                key: "10",
+                icon: <QuestionCircleOutlined />,
+                label: <Link to="/question-collections">Bộ sưu tập câu hỏi</Link>,
+              },
+              {
+                key: "8",
+                icon: <NotificationOutlined />,
+                label: <Link to="/notify-config">Cấu hình thông báo</Link>,
               }
             ]}
           />
