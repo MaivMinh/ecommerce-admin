@@ -5,6 +5,8 @@ import {
   ReloadOutlined,
   SearchOutlined,
   MinusCircleOutlined,
+  UploadOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -24,6 +26,8 @@ import {
   Tag,
   Typography,
   Divider,
+  Upload,
+  Image,
 } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
@@ -40,6 +44,8 @@ const Campaigns = () => {
   const [loading, setLoading] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [imageUrls, setImageUrls] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -102,6 +108,39 @@ const Campaigns = () => {
     }
   };
 
+  const handleImageUpload = async (file) => {
+    setUploadingImages(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await apiClient.post(
+        "/api/files/images/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      const imageUrl = response.data.data.url;
+      console.log(imageUrl)
+      setImageUrls((prev) => [...prev, imageUrl]);
+      message.success("Upload ảnh thành công!");
+      return false; // Prevent default upload behavior
+    } catch (error) {
+      message.error("Upload ảnh thất bại!");
+      return false;
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleRemoveImage = (imageUrl) => {
+    setImageUrls((prev) => prev.filter((url) => url !== imageUrl));
+  };
+
   const handleOpenDialog = (campaign = null) => {
     if (campaign) {
       form.setFieldsValue({
@@ -130,6 +169,13 @@ const Campaigns = () => {
           },
         ],
       });
+      // Set existing images for update
+      setImageUrls(
+        campaign.campaignImages?.map((img) => ({
+          id: img.id,
+          imageUrl: img.imageUrl,
+        })) || []
+      );
       setSelectedCampaign(campaign);
     } else {
       form.setFieldsValue({
@@ -144,6 +190,7 @@ const Campaigns = () => {
           },
         ],
       });
+      setImageUrls([]);
       setSelectedCampaign(null);
     }
     setOpenDialog(true);
@@ -152,6 +199,7 @@ const Campaigns = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedCampaign(null);
+    setImageUrls([]);
     form.resetFields();
   };
 
@@ -173,9 +221,19 @@ const Campaigns = () => {
       };
 
       if (selectedCampaign) {
+        // Update campaign - send campaignImages with id
+        payload.campaignImages = imageUrls.map((img) => ({
+          id: img.id || undefined,
+          imageUrl: typeof img === "string" ? img : img.imageUrl,
+          campaignId: selectedCampaign.id,
+        }));
         await apiClient.put(`/api/campaigns`, payload);
         message.success("Cập nhật Campaign thành công!");
       } else {
+        // Create campaign - send imageUrls array
+        payload.imageUrls = imageUrls.map((img) =>
+          typeof img === "string" ? img : img.imageUrl
+        );
         await apiClient.post(`/api/campaigns`, payload);
         message.success("Tạo mới Campaign thành công!");
       }
@@ -531,6 +589,69 @@ const Campaigns = () => {
           <Form.Item name="description" label="Mô tả">
             <TextArea rows={4} placeholder="Nhập mô tả campaign" />
           </Form.Item>
+
+          <Divider orientation="left">
+            <PictureOutlined /> Hình ảnh Campaign
+          </Divider>
+
+          <Card size="small" style={{ marginBottom: 24 }}>
+            <Upload
+              beforeUpload={handleImageUpload}
+              showUploadList={false}
+              accept="image/*"
+              multiple
+            >
+              <Button
+                icon={<UploadOutlined />}
+                loading={uploadingImages}
+                style={{ marginBottom: 16 }}
+              >
+                Upload ảnh
+              </Button>
+            </Upload>
+
+            {imageUrls.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                {imageUrls.map((img, index) => {
+                  const imageUrl = typeof img === "string" ? img : img.imageUrl;
+                  return (
+                    <div
+                      key={index}
+                      style={{ position: "relative", width: 150, height: 150 }}
+                    >
+                      <Image
+                        src={imageUrl}
+                        alt={`Campaign ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          borderRadius: 8,
+                        }}
+                      />
+                      <Button
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleRemoveImage(img)}
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {imageUrls.length === 0 && (
+              <p className="ml-2">
+                <Text type="secondary">Chưa có ảnh nào được upload</Text>
+              </p>
+            )}
+          </Card>
 
           <Divider orientation="left">Danh sách Vouchers</Divider>
 
