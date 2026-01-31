@@ -133,7 +133,7 @@ const Categories = () => {
     try {
       // Assuming your API has an endpoint for file uploads
       const response = await apiClient.post(
-        "/api/files/images/upload",
+        "/api/files/upload",
         formData,
         {
           headers: {

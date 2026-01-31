@@ -192,13 +192,9 @@ const Products = () => {
     formData.append("image", file);
 
     try {
-      const response = await apiClient.post(
-        "/api/files/images/upload",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      const response = await apiClient.post("/api/files/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       const imageUrl = response.data.data.url;
       console.log("Cover image uploaded successfully:", imageUrl);
@@ -217,13 +213,9 @@ const Products = () => {
     formData.append("image", file);
 
     try {
-      const response = await apiClient.post(
-        "/api/files/images/upload",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      const response = await apiClient.post("/api/files/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       const imageUrl = response.data.data.url;
       console.log("Additional image uploaded successfully:", imageUrl);
@@ -555,8 +547,8 @@ const Products = () => {
           modalType === "add"
             ? "Add New Product"
             : modalType === "edit"
-            ? "Edit Product"
-            : "View Product"
+              ? "Edit Product"
+              : "View Product"
         }
         open={visible}
         onCancel={handleCancel}

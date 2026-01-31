@@ -115,7 +115,7 @@ const Campaigns = () => {
       formData.append("image", file);
 
       const response = await apiClient.post(
-        "/api/files/images/upload",
+        "/api/files/upload",
         formData,
         {
           headers: {
