@@ -50,6 +50,7 @@ const Products = () => {
   const [additionalImages, setAdditionalImages] = useState([]);
   const [coverImageURL, setCoverImageURL] = useState(null);
   const [additionalImageURLs, setAdditionalImageURLs] = useState([]);
+  const [variantColorHex, setVariantColorHex] = useState("#000000");
 
   // Helper function to validate image URLs
   const isValidImageUrl = (url) => {
@@ -173,6 +174,7 @@ const Products = () => {
       setProductVariants([]);
       setCoverImageURL("");
       setAdditionalImageURLs([]);
+      setVariantColorHex("#000000");
     }
   };
 
@@ -184,6 +186,7 @@ const Products = () => {
     setAdditionalImages([]);
     setCoverImageURL("");
     setAdditionalImageURLs([]);
+    setVariantColorHex("#000000");
   };
 
   // Custom upload handler for cover image
@@ -329,6 +332,7 @@ const Products = () => {
         };
         setProductVariants([...productVariants, newVariant]);
         variantForm.resetFields();
+        setVariantColorHex("#000000");
         message.success("Variant added successfully!");
       })
       .catch((info) => {
@@ -461,12 +465,16 @@ const Products = () => {
               width: 20,
               height: 20,
               display: "inline-block",
-              marginRight: 8,
               border: "1px solid #d9d9d9",
               borderRadius: "2px",
             }}
           />
-          {text}
+          <div>
+            <div>{text}</div>
+            <div style={{ fontSize: '12px', color: '#888', fontFamily: 'monospace' }}>
+              {record.colorHex}
+            </div>
+          </div>
         </Space>
       ),
     },
@@ -882,11 +890,45 @@ const Products = () => {
                       <Form.Item
                         name="colorHex"
                         label="Color Hex"
+                        initialValue="#000000"
                         rules={[
-                          { required: true, message: "Please select color" },
+                          { required: true, message: "Please enter color hex" },
+                          {
+                            pattern: /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/,
+                            message: "Please enter valid hex color (e.g., #FF0000)",
+                          },
                         ]}
                       >
-                        <Input type="color" />
+                        <Space.Compact style={{ width: '100%' }}>
+                          <Input
+                            placeholder="#000000"
+                            maxLength={7}
+                            value={variantColorHex}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setVariantColorHex(value);
+                              variantForm.setFieldsValue({ colorHex: value });
+                            }}
+                            style={{ flex: 1 }}
+                          />
+                          <input
+                            type="color"
+                            value={/^#([A-Fa-f0-9]{6})$/.test(variantColorHex) ? variantColorHex : '#000000'}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setVariantColorHex(value);
+                              variantForm.setFieldsValue({ colorHex: value });
+                            }}
+                            style={{
+                              width: 50,
+                              height: 32,
+                              border: '1px solid #d9d9d9',
+                              borderRadius: '0 6px 6px 0',
+                              cursor: 'pointer',
+                              marginLeft: -1,
+                            }}
+                          />
+                        </Space.Compact>
                       </Form.Item>
                     </Col>
                   </Row>
